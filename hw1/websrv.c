@@ -78,7 +78,7 @@ void handler(int fd) {
 	static char buffer[BUFSIZE + 1];
 
 	ret = read(fd, buffer, BUFSIZE);
-	// printf("in:\n%s\n", buffer);
+	//printf("in:\n%s\n", buffer);
 
 	if(ret < BUFSIZE) buffer[ret] = 0;
 
@@ -86,31 +86,38 @@ void handler(int fd) {
 	if(!strncmp(buffer, "GET / ", 6))
 		strcpy(buffer, "GET /public/index.html\0");
 	if(!strncmp(buffer, "POST", 4)) {
-		buflen = strlen(buffer);
-		buffer[buflen] = '\0';
-		ret = read(fd, buffer, BUFSIZE);
-
+		char boundary[42] = "\r\n";
 		char filename[128];
 		char path[128] = "./upload/";
-		char *ptr = strstr(buffer, "filename=\"");
-		ptr += 10;
-		char *end = strchr(ptr, '\"');
+		char *ptr, *end;
 
+		/* ---------read data--------- */
+		ret = read(fd, buffer, BUFSIZE);
+		
+		/* -------read boundary------- */
+		for(int i = 0; i < 40; i++)
+			boundary[i+2] = buffer[i];
+		
+		/* -------read filename------- */
+		ptr = strstr(buffer, "filename=\"");
+		ptr += 10;
+		end = strchr(ptr, '\"');
 		strncpy(filename, ptr, end-ptr);
-		filename[end-ptr] ='\0';
 		strcat(path, filename);
 
+		/* ------open file and log----- */
 		FILE *fp, *log;
 		fp = fopen(path, "wb");
 		log = fopen("log", "a");
 
+		/* ------find start byte------- */
 		ptr = strstr(buffer, "Content-Type:");
 		ptr = strchr(ptr, '\n');
 		ptr += 3;
 		buflen = ret - (uint8_t)(ptr-buffer);
 		
 
-		end = memstr(ptr, buflen, "\r\n------WebKit");
+		end = memstr(ptr, buflen, boundary);
 
 		if(end){ //find boundary
 			fwrite(ptr, end - ptr, 1, fp);
@@ -123,7 +130,7 @@ void handler(int fd) {
 				buflen = read(fd, buffer, BUFSIZE);
 				memcpy(tmp+128, buffer, 128);
 				ptr = tmp;
-				end = memstr(ptr, 256, "\r\n------WebKit");
+				end = memstr(ptr, 256, boundary);
 
 				if(end){ //在tmp
 					fwrite(ptr, end - ptr, 1, fp);
@@ -133,12 +140,12 @@ void handler(int fd) {
 					fwrite(ptr, 128, 1, fp);
 				}
 				ptr = buffer;
-				end = memstr(ptr, buflen, "\r\n------WebKit");
+				end = memstr(ptr, buflen, boundary);
 				if(end){ //在buffer
 					fwrite(ptr, end-ptr, 1, fp);
 					break;
 				}
-				else{ //不再在buffer
+				else{ //不在buffer
 					fwrite(ptr, buflen-128, 1, fp);
 					memcpy(tmp, ptr+buflen-128, 128);
 				}
@@ -167,7 +174,6 @@ void handler(int fd) {
 
 		sprintf(buffer, "HTTP/1.0 200 OK\r\nContent-Type: %s\r\n\r\n", get_content_type(buffer));
 		write(fd, buffer, strlen(buffer));
-		//printf("ret:\n%s", buffer);
 		while((ret = read(file_fd, buffer, BUFSIZE)) > 0) {
 			write(fd, buffer, ret);
 		}

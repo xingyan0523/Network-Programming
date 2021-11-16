@@ -109,23 +109,39 @@ void handler(int fd) {
 		ptr += 3;
 		buflen = ret - (uint8_t)(ptr-buffer);
 		
+
 		end = memstr(ptr, buflen, "\r\n------WebKit");
 
 		if(end){ //find boundary
 			fwrite(ptr, end - ptr, 1, fp);
 		}
 		else{
-			fwrite(ptr, ret - (uint8_t)(ptr-buffer), 1, fp);
+			uint8_t tmp[256] = "";
+			memcpy(tmp, ptr+buflen-128, 128);
+			fwrite(ptr, buflen-128, 1, fp);
 			while(1){
 				buflen = read(fd, buffer, BUFSIZE);
-				ptr = buffer;
-		
-				end = memstr(ptr, buflen, "\r\n------WebKit");
-				if(end){
+				memcpy(tmp+128, buffer, 128);
+				ptr = tmp;
+				end = memstr(ptr, 256, "\r\n------WebKit");
+
+				if(end){ //在tmp
 					fwrite(ptr, end - ptr, 1, fp);
 					break;
 				}
-				fwrite(ptr, buflen, 1, fp);
+				else{ //不在tmp
+					fwrite(ptr, 128, 1, fp);
+				}
+				ptr = buffer;
+				end = memstr(ptr, buflen, "\r\n------WebKit");
+				if(end){ //在buffer
+					fwrite(ptr, end-ptr, 1, fp);
+					break;
+				}
+				else{ //不再在buffer
+					fwrite(ptr, buflen-128, 1, fp);
+					memcpy(tmp, ptr+buflen-128, 128);
+				}
 			}
 		}
 		/* -----update log----- */

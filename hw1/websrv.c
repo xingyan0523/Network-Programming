@@ -10,6 +10,8 @@
 #include <arpa/inet.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <time.h>
+
 
 
 #define SERV_PORT 8080
@@ -76,23 +78,12 @@ void handler(int fd) {
 	static char buffer[BUFSIZE + 1];
 
 	ret = read(fd, buffer, BUFSIZE);
-	printf("in:\n%s\n", buffer);
+	// printf("in:\n%s\n", buffer);
 
-	if(ret < 1) exit(3);
 	if(ret < BUFSIZE) buffer[ret] = 0;
-	
-	for(i = 0; i < ret; i++) 
-		if(buffer[i] == '\r'|| buffer[i] == '\n')
-			buffer[i] = 0;
 
-	for(i = 4; i < BUFSIZE; i++) {
-		if(buffer[i] == ' ') {
-			buffer[i] = 0;
-			break;
-		}
-	}
 
-	if(!strncmp(buffer, "GET /\0", 6))
+	if(!strncmp(buffer, "GET / ", 6))
 		strcpy(buffer, "GET /public/index.html\0");
 	if(!strncmp(buffer, "POST", 4)) {
 		buflen = strlen(buffer);
@@ -101,40 +92,35 @@ void handler(int fd) {
 
 		char filename[128];
 		char path[128] = "./upload/";
-
 		char *ptr = strstr(buffer, "filename=\"");
 		ptr += 10;
 		char *end = strchr(ptr, '\"');
+
 		strncpy(filename, ptr, end-ptr);
 		filename[end-ptr] ='\0';
-		printf("\nfilename=%s-\n", filename);
-		
 		strcat(path, filename);
-		FILE *fp;
-		fp = fopen(path, "ab");
+
+		FILE *fp, *log;
+		fp = fopen(path, "wb");
+		log = fopen("log", "a");
 
 		ptr = strstr(buffer, "Content-Type:");
 		ptr = strchr(ptr, '\n');
 		ptr += 3;
 		buflen = ret - (uint8_t)(ptr-buffer);
 		
-
 		end = memstr(ptr, buflen, "\r\n------WebKit");
 
-		uint8_t *tmp = ptr;
-		if(end){
-			
+		if(end){ //find boundary
 			fwrite(ptr, end - ptr, 1, fp);
 		}
 		else{
 			fwrite(ptr, ret - (uint8_t)(ptr-buffer), 1, fp);
-			fseek(fp, 0, SEEK_END);
 			while(1){
 				buflen = read(fd, buffer, BUFSIZE);
 				ptr = buffer;
 		
 				end = memstr(ptr, buflen, "\r\n------WebKit");
-				fseek(fp, 0, SEEK_END);
 				if(end){
 					fwrite(ptr, end - ptr, 1, fp);
 					break;
@@ -142,18 +128,30 @@ void handler(int fd) {
 				fwrite(ptr, buflen, 1, fp);
 			}
 		}
+		/* -----update log----- */
+		time_t rawtime;
+		struct tm *timeinfo;
+		time ( &rawtime );
+		timeinfo = localtime ( &rawtime );
+		fprintf (log, "filename: %s\ttime: %s", filename, asctime (timeinfo));
+		/* -------------------- */
+
 		strcpy(buffer, "GET /public/index.html\0");
 	}
 	if(!strncmp(buffer, "GET /", 5)) {
-		buflen = strlen(buffer);
+		for(i = 4; i < BUFSIZE; i++) {
+			if(buffer[i] == ' ') {
+				buffer[i] = 0;
+				break;
+			}
+		}
 
 		if((file_fd = open(&buffer[5],O_RDONLY)) < 0)
 			write(fd, "Failed to open file", 19);
 
-
 		sprintf(buffer, "HTTP/1.0 200 OK\r\nContent-Type: %s\r\n\r\n", get_content_type(buffer));
-		write(fd,buffer,strlen(buffer));
-		printf("ret:\n%s", buffer);
+		write(fd, buffer, strlen(buffer));
+		//printf("ret:\n%s", buffer);
 		while((ret = read(file_fd, buffer, BUFSIZE)) > 0) {
 			write(fd, buffer, ret);
 		}
@@ -194,6 +192,7 @@ int main(int argc, char **argv) {
 		if ( (childpid = fork()) == 0) {	/* child process */
 			close(listenfd);	/* close listening socket */
 			handler(connfd);	/* process the request */
+			//printf("--%s\n", packet);
 			exit(0);
 		}
 		close(connfd);			/* parent closes connected socket */

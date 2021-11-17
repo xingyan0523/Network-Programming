@@ -108,7 +108,7 @@ void handler(int fd) {
 		/* ------open file and log----- */
 		FILE *fp, *log;
 		fp = fopen(path, "wb");
-		log = fopen("log", "a");
+		log = fopen("upload/log", "a");
 
 		/* ------find start byte------- */
 		ptr = strstr(buffer, "Content-Type:");

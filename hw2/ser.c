@@ -30,7 +30,6 @@ struct table{
 	bool stat[64];
 	int v[64][3][3];
 	int fd[64][2];
-	int num;
 };
 
 bool login(char *n, char *p, int fd){
@@ -122,6 +121,18 @@ void init(){
 	strcpy(password[1], "bb");
 }
 
+void end_game(struct table *tb, int table_id){
+	req[tb->fd[table_id][0]][tb->fd[table_id][1]] = 0;
+	req[tb->fd[table_id][1]][tb->fd[table_id][0]] = 0;
+	tb->fd[table_id][0] = tb->fd[table_id][1] = -1;
+	tb->stat[table_id] = false;
+	for(int i = 0; i < 3; i++){
+		for(int j = 0; j < 3; j++){
+			tb->v[table_id][i][j] = -1;
+		}	
+	}
+}
+
 int main(int argc, char **argv){
 	int					i, maxi, max_fd, litsen_fd, conn_fd, sockfd;
 	int					n_ready, client[SETSIZE];
@@ -144,7 +155,6 @@ int main(int argc, char **argv){
 	bind(litsen_fd, (struct sockaddr *) &servaddr, sizeof(servaddr));
 
 	/* table init */
-	tb.num = 0;
 	for(i = 0; i < SETSIZE; i++){
 		fd_arr[i] = tb.fd[i][0] = tb.fd[i][1] = -1;
 		for(int j = 0; j < PLAYER; j++)
@@ -265,7 +275,7 @@ int main(int argc, char **argv){
 							
 							strcat(buf, "Waiting...\n");
 							write(fd[0], buf, (int)strlen(buf));
-							strcpy(buf+len, "Your turn!\nEnter x-axis and y-axis(x y): \n");
+							strcpy(buf+len, "Your turn!\nEnter the coord(x y): \n");
 							write(fd[1], buf, (int)strlen(buf));
 							memset(buf, 0, strlen(buf));
 							continue;
@@ -314,6 +324,7 @@ int main(int argc, char **argv){
 							ascii(lose + (int)strlen(lose), tb.v[table_id]);
 							write(tb.fd[table_id][0], win, (int)strlen(win));
 							write(tb.fd[table_id][1], lose, (int)strlen(lose));
+							end_game(&tb, table_id);
 						}
 						else if(parse(&tb, 1, table_id) == 1){
 							printf("parse: 1\n");
@@ -321,6 +332,7 @@ int main(int argc, char **argv){
 							ascii(lose + (int)strlen(lose), tb.v[table_id]);
 							write(tb.fd[table_id][1], win, (int)strlen(win));
 							write(tb.fd[table_id][0], lose, (int)strlen(lose));
+							end_game(&tb, table_id);
 						}
 						else if(draw(&tb, table_id)){
 							printf("parse: 2\n");
@@ -328,6 +340,7 @@ int main(int argc, char **argv){
 							ascii(buf + (int)strlen(buf), tb.v[table_id]);
 							write(tb.fd[table_id][1], buf, (int)strlen(buf));
 							write(tb.fd[table_id][0], buf, (int)strlen(buf));
+							end_game(&tb, table_id);
 						}
 						else{
 							memset(buf, 0, strlen(buf));
@@ -344,7 +357,7 @@ int main(int argc, char **argv){
 							memset(buf, 0, strlen(buf));
 							sprintf(buf, "8\n");
 							ascii(buf + (int)strlen(buf), tb.v[table_id]);
-							strcat(buf, "Your turn!\nEnter x-axis and y-axis(x y): \n");
+							strcat(buf, "Your turn!\nEnter the coord(x y): \n");
 							write(tb.fd[table_id][turn], buf, (int)strlen(buf));
 						}
 					}

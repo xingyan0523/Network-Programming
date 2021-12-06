@@ -5,7 +5,6 @@
 struct table{
 	bool stat[64];
 	int v[64][3][3];
-	int num;
 };
 
 int find_empty_table(struct table *tb){

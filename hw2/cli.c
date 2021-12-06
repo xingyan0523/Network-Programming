@@ -189,6 +189,9 @@ start:
 				}
 			}				
 		}
+		else if(!strncmp(input, "\n", 1)){
+
+		}
 		else{
 			printf("error\n");
 		}

@@ -27,8 +27,6 @@ bool check_axis(int x, int y, struct table *tb, int table_id){
 }
 
 int parse(struct table *tb, int player, int table_id){
-    printf("*0*\n");
-    
     for(int x = 0; x < 3; x++){
         int i = 0;
         for(int y = 0; y < 3; y++){
@@ -37,8 +35,6 @@ int parse(struct table *tb, int player, int table_id){
 		}
         if(i == 3) return player;
     }
-    printf("*1*\n");
-
     for(int x = 0; x < 3; x++){
         int i = 0;
         for(int y = 0; y < 3; y++){
@@ -47,15 +43,12 @@ int parse(struct table *tb, int player, int table_id){
 		}
         if(i == 3) return player;
     }
-    
-    printf("*2*\n");
     int i = 0;
     for(int x = 0; x < 3; x++){
         if(tb->v[table_id][x][x] == player) i++;
         else break;
     }
     if(i == 3) return player;
-    printf("*3*\n");
     i = 0;
     int y = 2;
     for(int x = 0; x < 3; x++, y--){

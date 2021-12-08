@@ -99,7 +99,7 @@ start:
 			memset(sendline, 0, strlen(sendline));
 
 			read(sockfd, recvline, MAXLINE);
-			fputs(recvline, stdout);
+			fputs(recvline+2, stdout);
 			while(strncmp(recvline, "88", 2)){
 				int x, y;
 				int table_id;
@@ -116,19 +116,19 @@ start:
 						break;
 					}
 					else{
-						printf("Wrong coord!\nPlease re-enter x-axis and y-axis(x y): \n");
+						printf("Wrong coord!\nPlease re-enter the coord(x y): \n");
 					}
 				}
 				sendline[0] = '8';
 				write(sockfd, sendline, (int)strlen(sendline));
 				read(sockfd, recvline, MAXLINE);
 				if(!strncmp(recvline, "8", 1)){
-					fputs(recvline, stdout);
+					fputs(recvline+2, stdout);
 				}
 				else if(!strncmp(recvline, "9", 1)){
-					fputs(recvline, stdout);
+					fputs(recvline+2, stdout);
 					read(sockfd, recvline, MAXLINE);
-					fputs(recvline, stdout);
+					fputs(recvline+2, stdout);
 				}
 			}
 				//signal(SIGINT, sig_logout);
@@ -153,7 +153,7 @@ start:
 			fputs(recvline+2, stdout);
 
 			read(sockfd, recvline, MAXLINE);
-			fputs(recvline, stdout);
+			fputs(recvline+2, stdout);
 			// read(sockfd, recvline, MAXLINE);
 			// fputs(recvline, stdout);
 			while(strncmp(recvline, "88", 2)){
@@ -172,7 +172,7 @@ start:
 						break;
 					}
 					else{
-						printf("Wrong coord!\nPlease re-enter x-axis and y-axis(x y): \n");
+						printf("Wrong coord!\nPlease re-enter the coord(x y): \n");
 					}
 				}
 				sendline[0] = '8';
@@ -180,12 +180,12 @@ start:
 				read(sockfd, recvline, MAXLINE);
 						
 				if(!strncmp(recvline, "8", 1)){
-					fputs(recvline, stdout);
+					fputs(recvline+2, stdout);
 				}
 				else if(!strncmp(recvline, "9", 1)){
-					fputs(recvline, stdout);
+					fputs(recvline+2, stdout);
 					read(sockfd, recvline, MAXLINE);
-					fputs(recvline, stdout);
+					fputs(recvline+2, stdout);
 				}
 			}				
 		}

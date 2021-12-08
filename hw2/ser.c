@@ -267,7 +267,7 @@ int main(int argc, char **argv){
 						int fd[2];
 						if(ret = req_user(buf+2, sockfd, fd) == 2){
 							int table_id = find_empty_table(&tb);
-							sprintf(buf, "5\n%d\nGame start.\n", table_id);
+							sprintf(buf, "5\ngame id:%d\nGame start.\n", table_id);
 							ascii(buf + (int)strlen(buf), tb.v[table_id]);
 							tb.fd[table_id][0] = fd[0];
 							tb.fd[table_id][1] = fd[1];
@@ -352,7 +352,7 @@ int main(int argc, char **argv){
 							}
 							sprintf(buf, "9\n");
 							ascii(buf + (int)strlen(buf), tb.v[table_id]);
-							strcat(buf, "Waiting\n");
+							strcat(buf, "Waiting...\n");
 							write(tb.fd[table_id][wait], buf, (int)strlen(buf));
 							memset(buf, 0, strlen(buf));
 							sprintf(buf, "8\n");

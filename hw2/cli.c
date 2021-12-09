@@ -63,7 +63,7 @@ login:
 	if(state) goto login;
 			
 	signal(SIGINT, sig_logout);
-	printf("list\t\t\t--list all online user\nselect user_name\t--send request to (user_name)\nlook\t\t\t--list all game request\naccept (user_name)\t--accept game\n");
+	printf("list\t\t\t--list all online user\nselect user_name\t--send request to (user_name)\nlook\t\t\t--list all game request\naccept (user_name)\t--accept game\nlogout\t\t\t--logout\nrank\t\t\t--show current rank\n");
 start:
 	while(fgets(input, 4096, stdin)){
 		memset(recvline, 0, strlen(recvline));
@@ -146,6 +146,7 @@ start:
 			strcat(sendline, input + 7);
 			if(!strcmp(name, input+7)){
 				printf("Wrong user\n");
+				memset(input, 0, strlen(input));
 				continue;
 			}
 			write(sockfd, sendline, (int)strlen(sendline));
@@ -188,6 +189,12 @@ start:
 					fputs(recvline+2, stdout);
 				}
 			}				
+		}
+		else if(!strncmp(input, "rank", 4)){
+			sprintf(sendline, "9\n");
+			write(sockfd, sendline, (int)strlen(sendline));
+			read(sockfd, recvline, MAXLINE);
+			fputs(recvline, stdout);
 		}
 		else if(!strncmp(input, "\n", 1)){
 

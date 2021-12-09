@@ -22,15 +22,23 @@
 
 char name[2][32];
 char password[2][32];
-int fd_arr[64];
-bool online[64];
-int req[64][64];
+int fd_arr[SETSIZE];
+bool online[SETSIZE];
+int req[SETSIZE][SETSIZE];
 
 struct table{
-	bool stat[64];
-	int v[64][3][3];
-	int fd[64][2];
+	bool stat[SETSIZE];
+	int v[SETSIZE][3][3];
+	int fd[SETSIZE][2];
 };
+
+struct rank{
+	int player;
+	int win;
+	int lose;
+	int draw;
+	int score;
+}r[SETSIZE];
 
 bool login(char *n, char *p, int fd){
 	for(int i = 0; i < PLAYER; i++){
@@ -133,6 +141,25 @@ void end_game(struct table *tb, int table_id){
 	}
 }
 
+int compare (const void * a, const void * b)
+{
+
+  struct rank *rka = (struct rank *)a;
+  struct rank *rkb = (struct rank *)b;
+
+  return ( rkb->score - rka->score);
+}
+
+void rank_req(char *buf){
+	qsort(r, PLAYER, sizeof(r[0]), compare);
+	int count = 0;
+	count += sprintf(buf, "-------------------rank-------------------\n");
+	count += sprintf(buf + count, "no.\tname\twin\tdraw\tlose\tscore\n");
+	for(int i = 0; i < PLAYER; i++){
+		count += sprintf(buf + count, "%d\t%s\t%d\t%d\t%d\t%d\n", i+1, name[r[i].player], r[i].win, r[i].draw, r[i].lose, r[i].score);
+	}
+}
+
 int main(int argc, char **argv){
 	int					i, maxi, max_fd, litsen_fd, conn_fd, sockfd;
 	int					n_ready, client[SETSIZE];
@@ -142,6 +169,7 @@ int main(int argc, char **argv){
 	socklen_t			clilen;
 	struct sockaddr_in	cliaddr, servaddr;
 	struct table tb;
+	struct rank rk;
 
 	init();
 
@@ -166,6 +194,8 @@ int main(int argc, char **argv){
 		    	tb.v[i][x][y] = -1;
 	    	}
 		}
+		r[i].player = i;
+		r[i].win = r[i].lose = r[i].draw = r[i].score = 0;
 	}
 
 
@@ -215,9 +245,7 @@ int main(int argc, char **argv){
 					FD_CLR(sockfd, &allset);
 					client[i] = -1;
 				} else{
-					// printf("%s", buf);
 					int state;
-
 					char *ptr = buf;
 					state = *ptr - '0';
 					char *end;
@@ -324,6 +352,16 @@ int main(int argc, char **argv){
 							ascii(lose + (int)strlen(lose), tb.v[table_id]);
 							write(tb.fd[table_id][0], win, (int)strlen(win));
 							write(tb.fd[table_id][1], lose, (int)strlen(lose));
+							for(int i = 0; i < PLAYER; i++){
+								if(tb.fd[table_id][0] == fd_arr[i]){
+									r[i].win++;
+									r[i].score++;
+								}
+								if(tb.fd[table_id][1] == fd_arr[i]){
+									r[i].lose++;
+									r[i].score--;
+								}
+							}
 							end_game(&tb, table_id);
 						}
 						else if(parse(&tb, 1, table_id) == 1){
@@ -332,6 +370,16 @@ int main(int argc, char **argv){
 							ascii(lose + (int)strlen(lose), tb.v[table_id]);
 							write(tb.fd[table_id][1], win, (int)strlen(win));
 							write(tb.fd[table_id][0], lose, (int)strlen(lose));
+							for(int i = 0; i < PLAYER; i++){
+								if(tb.fd[table_id][1] == fd_arr[i]){
+									r[i].win++;
+									r[i].score++;
+								}
+								if(tb.fd[table_id][0] == fd_arr[i]){
+									r[i].lose++;
+									r[i].score--;
+								}
+							}
 							end_game(&tb, table_id);
 						}
 						else if(draw(&tb, table_id)){
@@ -340,6 +388,14 @@ int main(int argc, char **argv){
 							ascii(buf + (int)strlen(buf), tb.v[table_id]);
 							write(tb.fd[table_id][1], buf, (int)strlen(buf));
 							write(tb.fd[table_id][0], buf, (int)strlen(buf));
+							for(int i = 0; i < PLAYER; i++){
+								if(tb.fd[table_id][1] == fd_arr[i]){
+									r[i].draw++;
+								}
+								if(tb.fd[table_id][0] == fd_arr[i]){
+									r[i].draw++;
+								}
+							}
 							end_game(&tb, table_id);
 						}
 						else{
@@ -361,6 +417,11 @@ int main(int argc, char **argv){
 							write(tb.fd[table_id][turn], buf, (int)strlen(buf));
 						}
 					}
+					else if(state == 9){
+						rank_req(buf);
+						write(sockfd, buf, (int)strlen(buf));
+					}
+
 					memset(buf, 0, strlen(buf));
 					//write(sockfd, buf, n);
 				}

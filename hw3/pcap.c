@@ -9,7 +9,7 @@
 #define SNAP_LEN 1518
 #define SIZE_ETHERNET 14
 #define ETHER_ADDR_LEN 6
-#define PAY_LINE 16
+#define PAYLOAD_LEN 16
 
 /* Ethernet header */
 struct eth_hdr {
@@ -111,24 +111,25 @@ void print_payload(const u_char *payload, int len) {
 	int line_len;
 	int offset = 0;
 	const u_char *ch = payload;
-
 	if (len <= 0) return;
-	if (len <= PAY_LINE) {
+	printf("----------------------------------------------------------------------------\n");
+	if (len <= PAYLOAD_LEN) {
 		print_payload_line(ch, len, offset);
 		return;
 	}
 
 	while(1) {
-		line_len = PAY_LINE % len;
+		line_len = PAYLOAD_LEN % len;
 		print_payload_line(ch, line_len, offset);
 		len -= line_len;
 		ch += line_len;
-		offset += PAY_LINE;
-		if (len <= PAY_LINE) {
+		offset += PAYLOAD_LEN;
+		if (len <= PAYLOAD_LEN) {
 			print_payload_line(ch, len, offset);
 			break;
 		}
 	}
+	printf("----------------------------------------------------------------------------\n");
 }
 
 void parse_packet(const struct pcap_pkthdr *header, const u_char *packet) {

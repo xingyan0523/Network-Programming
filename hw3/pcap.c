@@ -9,6 +9,7 @@
 #define SNAP_LEN 1518
 #define SIZE_ETHERNET 14
 #define ETHER_ADDR_LEN 6
+#define PAY_LINE 16
 
 /* Ethernet header */
 struct eth_hdr {
@@ -69,8 +70,7 @@ struct udp_hdr {
     u_int16_t uh_sum;               /* checksum */
 };
 
-
-void print_ascii(const u_char *payload, int len, int offset) {
+void print_payload_line(const u_char *payload, int len, int offset) {
 	int i;
 	int gap;
 	const u_char *ch;
@@ -90,7 +90,6 @@ void print_ascii(const u_char *payload, int len, int offset) {
 			printf("   ");
 	}
 	printf("   ");
-	
 	ch = payload;
 	for(i = 0; i < len; i++) {
 		if (isprint(*ch)) printf("%c", *ch);
@@ -109,40 +108,37 @@ void print_mac(u_char *ptr){
 }
 
 void print_payload(const u_char *payload, int len) {
-
-	int len_rem = len;
-	int line_width = 16;			/* number of bytes per line */
 	int line_len;
-	int offset = 0;					/* zero-based offset counter */
+	int offset = 0;
 	const u_char *ch = payload;
 
 	if (len <= 0) return;
-	if (len <= line_width) {
-		print_ascii(ch, len, offset);
+	if (len <= PAY_LINE) {
+		print_payload_line(ch, len, offset);
 		return;
 	}
 
 	while(1) {
-		line_len = line_width % len_rem;
-		print_ascii(ch, line_len, offset);
-		len_rem = len_rem - line_len;
-		ch = ch + line_len;
-		offset = offset + line_width;
-		if (len_rem <= line_width) {
-			print_ascii(ch, len_rem, offset);
+		line_len = PAY_LINE % len;
+		print_payload_line(ch, line_len, offset);
+		len -= line_len;
+		ch += line_len;
+		offset += PAY_LINE;
+		if (len <= PAY_LINE) {
+			print_payload_line(ch, len, offset);
 			break;
 		}
 	}
 }
 
 void parse_packet(const struct pcap_pkthdr *header, const u_char *packet) {
-	static int count = 1;                   /* packet counter */
+	static int count = 1;
 	
-	struct eth_hdr *eth; 	 	/* The ethernet header [1] */
-	struct ip_hdr *ip;              	/* The IP header */
-	struct tcp_hdr *tcp;            	/* The TCP header */
-	struct udp_hdr *udp;            	/* The UDP header */
-	char *payload;                    /* Packet payload */
+	struct eth_hdr *eth;
+	struct ip_hdr *ip;
+	struct tcp_hdr *tcp;
+	struct udp_hdr *udp;
+	char *payload;
         
     struct tm *tm_info;
     char timestr[26];
@@ -161,10 +157,7 @@ void parse_packet(const struct pcap_pkthdr *header, const u_char *packet) {
 	printf("Time: %s.%6d  ",timestr,(int)header->ts.tv_usec);
 	printf("Length: %d bytes\n",header->len);
 
-
-	/* define ethernet header */
 	eth = (struct eth_hdr*)(packet);
-	//u_char *type = (u_char*)eth->ether_type;
 
 	printf("Src mac: ");
 	print_mac(eth->ether_shost);
@@ -180,12 +173,9 @@ void parse_packet(const struct pcap_pkthdr *header, const u_char *packet) {
 		return;
 	}
 
-	/* print source and destination IP addresses */
 	printf("From: %s  ", inet_ntoa(ip->ip_src));
 	printf("To: %s  ", inet_ntoa(ip->ip_dst));
-	
     
-	/* determine protocol */
 	if(ip->ip_p == IPPROTO_TCP){
 		printf("Protocol: TCP\n");
 		/* define/compute tcp header offset */
